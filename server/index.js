@@ -1,7 +1,20 @@
+import "dotenv/config";
 import app from "./app.js";
+import { connectDB } from "./src/db/db.js";
 
-const port=6000;
+const PORT = process.env.PORT || 5000;
 
-app.listen(port,()=>{
-    console.log(`server listen on port no:${port}`);
-})
+const startServer = async () => {
+    try {
+        await connectDB();
+
+        app.listen(PORT, () => {
+            console.log(`FlowForge server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("Server startup failed:", error.message);
+        process.exit(1);
+    }
+};
+
+startServer();

@@ -5,4 +5,4 @@ const asyncHandler = async function(handler){
 
     }
 }
-export {asyncHandler}
+export default asyncHandler;

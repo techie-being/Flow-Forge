@@ -1,10 +1,14 @@
-
-
-  
 {
   "dependencies": {
+    "cloudinary": "^2.11.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
     "express": "^5.3.0",
-    "nodemon": "^3.1.14"
+    "helmet": "^8.3.0",
+    "multer": "^2.5.0",
+    "nodemon": "^3.1.14",
+    "pg": "^8.23.1"
   },
   "name": "flowforge-server",
   "version": "1.0.0",
@@ -18,5 +22,4 @@
   "keywords": [],
   "author": "Rakesh",
   "license": "ISC"
-  
 }
