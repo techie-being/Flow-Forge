@@ -2,8 +2,13 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
-import healthRouter from "./src/routes/health.routes.js";
 
+//router
+import healthRouter from "./src/routes/health.routes.js";
+import taskRouter from "./src/routes/task.routes.js";
+import userRouter from "./src/routes/user.routes.js";
+
+//app configuration
 const app = express()
 app.set("turst proxy",1);
 app.use(cookieParser());
@@ -20,6 +25,8 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 //routes
 app.use("/api/v1/health", healthRouter);
+app.use("/api/v1/tasks",taskRouter);
+app.use("/api/v1/users",userRouter);
 
 
 export default app;
