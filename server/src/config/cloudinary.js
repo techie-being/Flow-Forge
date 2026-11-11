@@ -3,7 +3,7 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from "node:fs/promises";
 
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    cloud_name: process.env.CLOUDINARY_HOST_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
@@ -40,4 +40,35 @@ const cloudinaryUploader = async (localFilePath) => {
     }
 };
 
-export { cloudinaryUploader, cloudinary };
+//task file
+const taskFileUploader = async (localFilePath) => {
+    if (!localFilePath) {
+        throw new Error("Local file path is required");
+    }
+
+    try {
+        const response = await cloudinary.uploader.upload(
+            localFilePath,
+            {
+                resource_type: "image",
+                folder: "FlowForge/task-files",
+            }
+        );
+
+        return response;
+    } catch (error) {
+        console.error("Task file upload failed:", error.message);
+        throw error;
+    } finally {
+        try {
+            await fs.unlink(localFilePath);
+        } catch (error) {
+            if (error.code !== "ENOENT") {
+                console.error("Temporary file cleanup failed:", error.message);
+            }
+        }
+    }
+};
+
+
+export { cloudinaryUploader,taskFileUploader, cloudinary };
