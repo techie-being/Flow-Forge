@@ -14,7 +14,7 @@ const app = express()
 app.set("turst proxy",1);
 app.use(cookieParser());
 app.use(cors({
-    origin:process.env.FRONTEND_URL,
+    origin:process.env.LOCALHOST_FRONTEND_URL,
     credentials:true,
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
