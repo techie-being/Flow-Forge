@@ -4,6 +4,7 @@ import ApiResponse from "../utils/apiResponse.js";
 import ApiError from "../utils/apiError.js";
 import {pool} from "../db/db.js";
 import { taskFileUploader, cloudinary } from "../config/cloudinary.js";
+import apiError from "../utils/apiError.js";
 
 const createTask = asyncHandler(async (req, res) => {
     let uploadedFile;
@@ -12,7 +13,7 @@ const createTask = asyncHandler(async (req, res) => {
         // 1. Extract task details
         const { description } = req.body;
         //const userId = req.user?.id;
-        const userId = 1;
+        const userId = req.user?.id;
         // 2. Validate authenticated user
         if (!userId) {
             throw new ApiError(401, "Unauthorized request");
@@ -82,5 +83,130 @@ const createTask = asyncHandler(async (req, res) => {
     }
 });
 
+const getUserTasks = asyncHandler(async (req, res) => {
 
-export default createTask;
+    const userId = req.user?.id;
+
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized request");
+    }
+
+    const result = await pool.query(
+        `SELECT *
+         FROM tasks
+         WHERE user_id = $1
+         ORDER BY created_at DESC`,
+        [userId]
+    );
+
+    // if(!result){
+    //     throw new apiError("404","userId does not exist");
+    // }
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            result.rows,
+            "User tasks fetched successfully"
+        )
+    );
+});
+
+const getTaskById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    // Validate task ID
+    const taskId = Number(id);
+
+    if (!Number.isInteger(taskId) || taskId <= 0) {
+        throw new ApiError(400, "Invalid task ID");
+    }
+
+    const userId = req.user.id;
+
+    const result = await pool.query(
+        `SELECT *
+         FROM tasks
+         WHERE id = $1 AND user_id = $2`,
+        [taskId, userId]
+    );
+
+    const task = result.rows[0];
+
+    if (!task) {
+        throw new ApiError(404, "Task not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            task,
+            "Task fetched successfully"
+        )
+    );
+});
+
+const deleteTask = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    // Validate task ID
+    const taskId = Number(id);
+
+    if (!Number.isInteger(taskId) || taskId <= 0) {
+        throw new ApiError(400, "Invalid task ID");
+    }
+
+    const userId = req.user.id;
+
+    // Find task belonging to the logged-in user
+    const result = await pool.query(
+        `SELECT id, file_public_id
+         FROM tasks
+         WHERE id = $1 AND user_id = $2`,
+        [taskId, userId]
+    );
+
+    const task = result.rows[0];
+
+    if (!task) {
+        throw new ApiError(404, "Task not found");
+    }
+
+    // Delete PDF from Cloudinary
+    if (task.file_public_id) {
+        const cloudinaryResponse = await cloudinary.uploader.destroy(
+            task.file_public_id,
+            { resource_type: "image" }
+        );
+
+        if (
+            cloudinaryResponse.result !== "ok" &&
+            cloudinaryResponse.result !== "not found"
+        ) {
+            throw new ApiError(500, "Failed to delete task file from Cloudinary");
+        }
+    }
+
+    // Delete task record from PostgreSQL
+    await pool.query(
+        `DELETE FROM tasks
+         WHERE id = $1 AND user_id = $2`,
+        [taskId, userId]
+    );
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            {},
+            "Task and associated file deleted successfully"
+        )
+    );
+});
+
+
+export {
+    createTask,
+    getUserTasks,
+    getTaskById,
+    deleteTask,
+}
