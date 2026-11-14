@@ -1,38 +1,45 @@
 import { Worker } from "bullmq";
 import workerRedis from "../config/workerRedis.js";
+import { executeTask } from "../services/workerExecution.service.js";
+import processTask from "./taskProcessor.js";
 
 const startWorker = (workerId, queueName) => {
-    const worker = new Worker(
-        queueName,
-        async (job) => {
-            console.log(`Worker ${workerId} received job:`, job.id);
-            console.log("Job data:", job.data);
+  const worker = new Worker(
+    queueName,
 
-            // Actual execution logic will be added later.
-        },
-        {
-            connection: workerRedis,
-        }
-    );
+    //execute actual task
+    async (job) => {
+      console.log(`Worker ${workerId} received job:`, job.id);
 
-    worker.on("completed", (job) => {
-        console.log(`Worker ${workerId} completed job: ${job.id}`);
-    });
+      const { taskId, workerId: assignedWorkerId } = job.data;
 
-    worker.on("failed", (job, error) => {
-        console.error(
-            `Worker ${workerId} failed job ${job?.id}:`,
-            error.message
-        );
-    });
+      return await executeTask({
+        taskId,
+        workerId: assignedWorkerId,
+        processor: processTask,
+      });
+    },
+    
+    {
+      connection: workerRedis,
+    },
+  );
 
-    worker.on("error", (error) => {
-        console.error(`Worker ${workerId} error:`, error.message);
-    });
+  worker.on("completed", (job) => {
+    console.log(`Worker ${workerId} completed job: ${job.id}`);
+  });
 
-    console.log(`Worker ${workerId} listening on ${queueName}`);
+  worker.on("failed", (job, error) => {
+    console.error(`Worker ${workerId} failed job ${job?.id}:`, error.message);
+  });
 
-    return worker;
+  worker.on("error", (error) => {
+    console.error(`Worker ${workerId} error:`, error.message);
+  });
+
+  console.log(`Worker ${workerId} listening on ${queueName}`);
+
+  return worker;
 };
 
 export default startWorker;
