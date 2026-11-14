@@ -1,61 +1,131 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { flowForgeApi } from "../../api/flowForgeApi";
 
-const storedUser = JSON.parse(localStorage.getItem("user"));
+export const fetchCurrentUser = createAsyncThunk("auth/me", async (_, { rejectWithValue }) => {
+  try {
+    const res = await flowForgeApi.getCurrentUser();
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.message);
+  }
+});
+
+export const registerUser = createAsyncThunk(
+  "auth/register",
+  async ({ email, password }, { dispatch, rejectWithValue }) => {
+    try {
+      await flowForgeApi.registerUser(email, password);
+      return await dispatch(fetchCurrentUser()).unwrap();
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const loginUser = createAsyncThunk(
+  "auth/login",
+  async ({ email, password }, { rejectWithValue }) => {
+    try {
+      const res = await flowForgeApi.loginUser(email, password);
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const logoutUser = createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
+  try {
+    await flowForgeApi.logoutUser();
+    return null;
+  } catch (err) {
+    return rejectWithValue(err.message);
+  }
+});
+
+export const fetchUserProfile = createAsyncThunk(
+  "auth/profile",
+  async (username, { rejectWithValue }) => {
+    try {
+      const res = await flowForgeApi.getUserProfile(username);
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
 
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    user: storedUser || null,
-    isLoggedIn: !!storedUser,
-    authInitialized: false,
-    loading: false,
-    error: null,
+    user: null,
+    isAuthenticated: false,
+    loading: true,
+    authError: null,
+    viewedProfile: null,
+    profileLoading: false,
+    profileError: null,
   },
-
   reducers: {
-    loginStart: (state) => {
-      state.loading = true;
-      state.error = null;
+    clearAuthError: (state) => {
+      state.authError = null;
     },
-    loginSuccess: (state, action) => {
-      state.user = action.payload;
-      state.isLoggedIn = true;
-      state.authInitialized = true;
-      state.loading = false;
-      state.error = null;
-      localStorage.setItem("user", JSON.stringify(action.payload));
+    clearViewedProfile: (state) => {
+      state.viewedProfile = null;
+      state.profileError = null;
     },
-    loginFailure: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-      state.user = null;
-      state.isLoggedIn = false;
-    },
-    logout: (state) => {
-      state.user = null;
-      state.isLoggedIn = false;
-      state.authInitialized = true;
-      state.loading = false;
-      state.error = null;
-      localStorage.removeItem("user");
-    },
-    updateUser: (state, action) => {
-      state.user = { ...state.user, ...action.payload };
-      localStorage.setItem("user", JSON.stringify(state.user));
-    },
-    setAuthInitialized: (state) => {
-      state.authInitialized = true;
-    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchCurrentUser.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchCurrentUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.isAuthenticated = Boolean(action.payload);
+      })
+      .addCase(fetchCurrentUser.rejected, (state) => {
+        state.loading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.authError = null;
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.authError = action.payload;
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.authError = null;
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.authError = action.payload;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.authError = null;
+      })
+      .addCase(fetchUserProfile.pending, (state) => {
+        state.profileLoading = true;
+        state.profileError = null;
+      })
+      .addCase(fetchUserProfile.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        state.viewedProfile = action.payload;
+      })
+      .addCase(fetchUserProfile.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.viewedProfile = null;
+        state.profileError = action.payload;
+      });
   },
 });
 
-export const {
-  loginStart,
-  loginSuccess,
-  loginFailure,
-  logout,
-  updateUser,
-  setAuthInitialized,
-} = authSlice.actions;
-
+export const { clearAuthError, clearViewedProfile } = authSlice.actions;
 export default authSlice.reducer;
