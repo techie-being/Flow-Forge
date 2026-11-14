@@ -6,10 +6,12 @@ import {
     logoutUser,
     refreshAccessToken,
     getCurrentUser,
-    getUserProfile
+    getUserProfile,
+    setupAccount
 } from "../controllers/user.controllers.js";
 import {verifyJwt} from "../middlewares/auth.middleware.js";
 import {optionalVerifyJwt} from "../middlewares/auth.middleware.js";
+import {upload} from "../middlewares/multer.middleware.js";
 
 const userRouter = Router();
 
@@ -21,6 +23,7 @@ userRouter.post("/refresh-token", refreshAccessToken);
 // Protected routes
 userRouter.post("/logout", verifyJwt, logoutUser);
 userRouter.get("/me", verifyJwt, getCurrentUser);
+userRouter.post("/setup-account", verifyJwt, upload.single("avatar"), setupAccount);
 
 // Public profile, with optional authentication
 userRouter.get("/profile/:username", optionalVerifyJwt, getUserProfile);
