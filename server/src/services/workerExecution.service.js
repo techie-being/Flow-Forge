@@ -1,6 +1,24 @@
 
 import { pool } from "../db/db.js";
 
+const recoverStaleExecutions = async (taskId) => {
+    const result = await pool.query(
+        `UPDATE task_executions
+         SET status = 'failed',
+             error_message = $1,
+             completed_at = CURRENT_TIMESTAMP
+         WHERE task_id = $2
+           AND status = 'running'
+         RETURNING id`,
+        [
+            "Execution interrupted. Job was recovered after worker restart.",
+            taskId,
+        ]
+    );
+
+    return result.rows;
+};
+
 const createExecutionRecord = async (taskId, workerId) => {
     // Find the next attempt number for this task
     const attemptResult = await pool.query(
@@ -70,7 +88,11 @@ const executeTask = async ({ taskId, workerId, processor }) => {
     let execution;
 
     try {
-        // 1. Create execution record
+        
+        // 1. Recover previous interrupted executions
+        await recoverStaleExecutions(taskId);
+        
+        // 2. Create new execution record
         execution = await createExecutionRecord(taskId, workerId);
 
         // 2. Retrieve task details
@@ -108,4 +130,6 @@ export {
     failExecution,
     getTaskForExecution,
     executeTask,
+    recoverStaleExecutions,
+
  };
