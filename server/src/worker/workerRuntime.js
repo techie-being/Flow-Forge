@@ -3,23 +3,22 @@ import workerRedis from "../config/workerRedis.js";
 import { executeTask } from "../services/workerExecution.service.js";
 import processTask from "./taskProcessor.js";
 
-const startWorker = (workerId, queueName) => {
+const startWorker = (workerId, workerDbId, queueName) => {
   const worker = new Worker(
     queueName,
 
-    //execute actual task
     async (job) => {
       console.log(`Worker ${workerId} received job:`, job.id);
 
-      const { taskId, workerId: assignedWorkerId } = job.data;
+      const { taskId } = job.data;
 
       return await executeTask({
         taskId,
-        workerId: assignedWorkerId,
+        workerId: workerDbId,
         processor: processTask,
       });
     },
-    
+
     {
       connection: workerRedis,
     },
