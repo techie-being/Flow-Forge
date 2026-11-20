@@ -22,7 +22,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "workers": "node src/worker/workerManager.js"
+    "workers": "node src/worker/workerManager.js",
+    "orchestrator": "node src/orchestrator/orchestratorProcess.js"
   },
   "keywords": [],
   "author": "Rakesh",
