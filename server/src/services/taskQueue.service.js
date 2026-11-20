@@ -1,3 +1,4 @@
+
 import taskQueue from "../queues/task.queue.js";
 
 const addTaskJob = async (taskId) => {
@@ -6,6 +7,11 @@ const addTaskJob = async (taskId) => {
         { taskId },
         {
             jobId: `task-${taskId}`,
+            attempts: 5,
+            backoff: {
+                type: "exponential",
+                delay: 5000,
+            },
         }
     );
 };
